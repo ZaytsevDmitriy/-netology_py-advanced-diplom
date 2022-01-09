@@ -1,24 +1,15 @@
-import psycopg2
 import vk_api
+from settings import GROUP_TOKEN, USER_TOKEN
+from random import randrange
 from vk_api.longpoll import VkLongPoll
-
-with open('vk_group_token.txt', 'r') as file_objekt:
-    GROP_TOKEN = file_objekt.read().strip()
-with open('vktoken.txt', 'r') as file_objekt:
-    USER_TOKEN = file_objekt.read().strip()
-
-vk = vk_api.VkApi(token=GROP_TOKEN)
-longpoll = VkLongPoll(vk)
-
-conn = psycopg2.connect(dbname='vkinder', user='vkinder',
-                        password='netology', host='localhost')
-cursor = conn.cursor()
+import json
+import datetime
 
 
 # получает информацию о пользователе
 def get_info(user_id):
     user_id = user_id
-    vk = vk_api.VkApi(token=GROP_TOKEN)
+    vk = vk_api.VkApi(token=GROUP_TOKEN)
     response = vk.method('users.get', {'user_ids': user_id, 'fields': 'city, sex, bdate'})
     user_info = [response[0]['id'], response[0]['first_name'], response[0]['last_name'],
                  response[0]['sex'], response[0]['city']['title'], f'https://vk.com/id{response[0]["id"]}']
@@ -79,6 +70,32 @@ def sort_photo(photo_list):
         return sort_list[:3]
     except(vk_api.exceptions.ApiError, TypeError):
         return ['нет фото']
+
+def get_long_poll(token):
+    vk = vk_api.VkApi(token=token)
+    longpoll = VkLongPoll(vk)
+    return longpoll
+
+def write_msg(user_id, message):
+    vk_api.VkApi(token=GROUP_TOKEN).method('messages.send',
+                                           {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7)})
+
+# создает файл json по результатам поиска
+def create_json(lst):
+    today = datetime.date.today()
+    today_str = f'{today.day}.{today.month}.{today.year}'
+    result = {}
+    result_list = []
+    for num, info in enumerate(lst):
+        result['data'] = today_str
+        result['first_name'] = info[0]
+        result['second_name'] = info[1]
+        result['link'] = info[2]
+        result['id'] = info[3]
+        result_list.append(result.copy())
+    with open("result.json", "a", encoding='UTF-8') as write_file:
+        json.dump(result_list, write_file, ensure_ascii=False)
+    print('Информация с результатами поиска успешно записана в json файл.')
 
 
 if __name__ == '__main__':
