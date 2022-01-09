@@ -99,4 +99,4 @@ def create_json(lst):
 
 
 if __name__ == '__main__':
-    print(get_info(552707168))
+    print(get_info(1))
